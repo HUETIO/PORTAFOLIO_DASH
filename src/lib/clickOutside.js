@@ -1,0 +1,16 @@
+// src/lib/clickOutside.js
+export function clickOutside(node) {
+    const handleClick = (event) => {
+        if (node && !node.contains(event.target) && !event.defaultPrevented) {
+            node.dispatchEvent(new CustomEvent('outclick'));
+        }
+    };
+
+    document.addEventListener('click', handleClick, true);
+
+    return {
+        destroy() {
+            document.removeEventListener('click', handleClick, true);
+        }
+    };
+}

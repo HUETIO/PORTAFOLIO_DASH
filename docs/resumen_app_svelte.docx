@@ -1,0 +1,132 @@
+Resumen de funcionalidades del archivo App.svelte
+
+1. Autenticación Firebase
+- Permite registro e inicio de sesión de usuarios usando Firebase Authentication.
+- Muestra formularios de login y registro, y gestiona el estado del usuario.
+- Permite cerrar sesión y muestra el email del usuario autenticado.
+
+2. Conexión con API de películas (The Movie Database)
+- Obtiene películas populares usando la API de TMDB.
+- Muestra un catálogo de películas con paginación reactiva.
+- Permite ver detalles de cada película en un modal.
+
+3. Agente Gemini (IA)
+- Integra un chat con el agente Gemini usando la función askGemini.
+- Permite enviar mensajes y recibir respuestas automáticas.
+- Muestra mensajes de error y estado de carga ("Escribiendo...").
+
+4. UI Dinámica y Carrusel
+- Incluye un carrusel de imágenes animado con soporte para arrastrar y auto-scroll.
+- Cambia el fondo dinámicamente usando una paleta de colores vibrantes.
+- Muestra el stack tecnológico del usuario (Backend, Frontend, Bases de Datos, Seguridad, Herramientas).
+
+5. Sistema de Tabs de colores
+- Permite abrir pestañas de colores con componentes personalizados.
+- Cada pestaña muestra contenido diferente según el color seleccionado.
+
+6. Proyectos destacados
+- Lista enlaces a los mejores proyectos del usuario.
+
+7. Secciones informativas
+- Sobre mí, código en acción, proyectos en desarrollo, soluciones eficientes.
+- Contacto: enlaces a correo, LinkedIn, WhatsApp y GitHub.
+
+8. Logs y depuración
+- Usa logs en consola para depurar datos de películas, páginas y estado del catálogo.
+
+9. Rutas y navegación
+- Utiliza svelte-spa-router para gestionar rutas internas.
+
+Este archivo es el núcleo de la aplicación, gestionando la interfaz, la autenticación, la comunicación con APIs externas y la interacción con el usuario.
+
+---
+
+Parte 1: Pruebas Manuales
+
+1. TC-REG-001 — Registro de usuario
+- Objetivo: Verificar que un usuario pueda registrarse correctamente.
+- Precondiciones: App abierta en http://localhost:5173/.
+- Pasos Detallados:
+  1. Clic en botón 🔐 Iniciar sesión.
+  2. En el dropdown, ingresar correo y contraseña en sección “Crear cuenta”.
+  3. Clic en Registrarse.
+- Resultado Esperado: Aparece mensaje “¡Registro exitoso! Ahora puedes iniciar sesión.”
+- Resultado Obtenido: ________
+- Evidencia: Captura del formulario y del mensaje de éxito.
+
+2. TC-LOG-002 — Login válido
+- Objetivo: Validar inicio de sesión con credenciales válidas.
+- Precondiciones: Usuario registrado en Firebase.
+- Pasos Detallados:
+  1. Clic en 🔐 Iniciar sesión.
+  2. Ingresar correo y contraseña válidos en “Login”.
+  3. Clic en Iniciar sesión.
+- Resultado Esperado: El usuario aparece logueado y se muestra el dropdown con el email.
+- Resultado Obtenido: ________
+- Evidencia: Captura del estado autenticado (nombre de usuario en navbar).
+
+3. TC-ACC-003 — Acceso a contenido restringido
+- Objetivo: Verificar que solo usuarios logueados vean “Mi Stack Tecnológico”.
+- Precondiciones: Usuario logueado.
+- Pasos Detallados:
+  1. Iniciar sesión.
+  2. Hacer scroll hasta sección “Mi Stack Tecnológico”.
+- Resultado Esperado: La sección aparece visible con carrusel y grid de tecnologías.
+- Resultado Obtenido: ________
+- Evidencia: Captura de la sección visible.
+
+4. TC-CIN-004 — Modal de película (Cinema Explorer)
+- Objetivo: Validar que se abra y cierre el modal “Info”.
+- Precondiciones: App cargada y películas visibles.
+- Pasos Detallados:
+  1. Scroll a “Cinema Explorer”.
+  2. Pasar el mouse sobre una tarjeta.
+  3. Clic en botón ▶ Info.
+  4. Clic en Cerrar.
+- Resultado Esperado: Modal se abre con información y se cierra correctamente.
+- Resultado Obtenido: ________
+- Evidencia: Capturas de modal abierto y cerrado.
+
+5. TC-TAB-005 — Sistema de Tabs
+- Objetivo: Validar apertura y cierre de pestañas de color.
+- Precondiciones: App cargada.
+- Pasos Detallados:
+  1. En “Color Tab Section”, clic en una pestaña.
+  2. Verificar que la pestaña aparece arriba.
+  3. Clic en “×” para cerrarla.
+- Resultado Esperado: La pestaña se abre y se cierra sin errores.
+- Resultado Obtenido: ________
+- Evidencia: Captura de pestaña abierta y luego cerrada.
+
+6. TC-REG-006 — Regresión
+- Objetivo: Verificar que el dropdown de login sigue funcionando después de cambios UI.
+- Precondiciones: App cargada.
+- Pasos Detallados:
+  1. Clic en 🔐 Iniciar sesión.
+  2. Verificar que el formulario aparece.
+  3. Clic en Cerrar.
+- Resultado Esperado: El dropdown abre y cierra sin errores.
+- Resultado Obtenido: ________
+- Evidencia: Capturas de apertura y cierre.
+
+---
+
+Parte 2: Pruebas Automatizadas
+
+Flujo automatizado usando Selenium (test_portfolio_e2e.py):
+
+1. Abrir el sitio web.
+2. Abrir el login (localizador: .auth-btn).
+3. Validar que el modal de registro/login esté visible (localizador: .register-dropdown).
+4. Cerrar el dropdown (localizador: .btn-close).
+5. Ir a la sección Cinema Explorer (localizador: #cinema-container).
+6. Abrir un modal de película (localizador: .movie-card, .btn-play).
+7. Validar modal visible y cerrarlo (localizador: .modal-window, .modal-actions button).
+8. Abrir una pestaña de color (localizador: .color-buttons button).
+9. Validar tab abierta (localizador: .tabs-container).
+
+Cada paso corresponde a una acción automatizada y un localizador CSS.
+
+---
+
+Evidencia: Se recomienda adjuntar capturas de pantalla de cada paso para ambos tipos de pruebas.

@@ -1,0 +1,24 @@
+{
+  "name": "portafolio_dash",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.12.0",
+    "@sveltejs/vite-plugin-svelte": "^6.0.0",
+    "svelte": "^5.35.5",
+    "vite": "^7.0.6"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.2.3",
+    "flowbite-svelte": "^1.31.0",
+    "svelte-carousel": "^1.0.25",
+    "svelte-spa-router": "^4.0.1"
+  }
+}

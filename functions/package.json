@@ -1,0 +1,16 @@
+{
+  "name": "capibaraneitor-sales-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "check": "node --check index.js"
+  },
+  "dependencies": {
+    "@google-cloud/recaptcha-enterprise": "^6.3.0",
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  }
+}
