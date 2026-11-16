@@ -159,7 +159,7 @@
   width: fit-content;
   max-width: 100%;
   margin: 0;
-  padding: 8px;
+  padding: 4px;
   border: 1px solid rgba(102, 194, 213, 0.32);
   border-radius: 14px;
   background: #06101a;
@@ -213,6 +213,11 @@
   font-weight: 750;
   letter-spacing: -0.06em;
   line-height: 1.05;
+}
+
+.score-goal {
+  color: #91a9b8;
+  font-size: 0.68rem;
 }
 
 .score-grid {
@@ -276,6 +281,7 @@
 
 .control-modes {
   display: inline-flex;
+  max-width: 100%;
   gap: 2px;
   padding: 3px;
   border: 1px solid rgba(147, 174, 191, 0.12);
@@ -286,6 +292,7 @@
 .control-modes button {
   min-height: 28px;
   padding: 4px 8px;
+  white-space: nowrap;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -353,6 +360,14 @@
   color: #a7c3d1;
   font-size: 0.78rem;
   line-height: 1.5;
+  text-align: center;
+}
+
+.game-result-message {
+  margin: 0;
+  color: #fda4af;
+  font-size: 0.72rem;
+  font-weight: 650;
   text-align: center;
 }
 
@@ -487,6 +502,10 @@
     font-size: 1.6rem;
   }
 
+  .score-goal {
+    font-size: 0.6rem;
+  }
+
   .score-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
@@ -586,6 +605,10 @@
     font-size: 1.4rem;
   }
 
+  .score-goal {
+    font-size: 0.56rem;
+  }
+
   .score-tile {
     display: grid;
     gap: 1px;
@@ -612,8 +635,8 @@
   }
 
   .control-modes button {
-    padding-inline: 5px;
-    font-size: 0.59rem;
+    padding-inline: 4px;
+    font-size: 0.54rem;
   }
 
   .swipe-hint {

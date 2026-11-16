@@ -12,6 +12,8 @@
   let score = 0;
   let best = 0;
   let enemyScore = 0;
+  const targetScore = 500;
+  let gameResult = "";
   let level = 1;
   let running = false;
   let gameOver = false;
@@ -58,14 +60,21 @@
   let isFullscreen = false;
   let isLandscape = false;
   let isSwipeMode = false;
+  let aiMode = false;
   let gameWrap;
   let boardObserver;
+  const directions = [
+    { x: 0, y: -1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+  ];
 
   function resize() {
     if (!canvas || !gameBoard) return;
     isLandscape = window.innerWidth > window.innerHeight;
-    const availableWidth = gameBoard.clientWidth - 20;
-    const availableHeight = gameBoard.clientHeight - 20;
+    const availableWidth = gameBoard.clientWidth - 8;
+    const availableHeight = gameBoard.clientHeight - 8;
     const maxSize = Math.min(availableWidth, availableHeight, 760);
     size = Math.max(grid * 4, Math.floor(maxSize / grid) * grid);
     canvas.width = size;
@@ -126,6 +135,7 @@
       if (obstacles.some((o) => o.x === b.x && o.y === b.y)) return false;
       if (b.x === food.x && b.y === food.y) return false;
       if (b.x === enemy.x && b.y === enemy.y) return false;
+      if (enemyBody.some((e) => e.x === b.x && e.y === b.y)) return false;
       const dist = Math.abs(b.x - head.x) + Math.abs(b.y - head.y);
       if (dist <= 2) return false; // evita spawn cerca de la cabeza
       return true;
@@ -161,6 +171,7 @@
     pause();
     score = 0;
     enemyScore = 0;
+    gameResult = "";
     isActive = false;
     gameOver = false;
     dir = { x: 1, y: 0 };
@@ -205,30 +216,166 @@
     }
   }
 
+  function getAiDirection() {
+    const head = snake[0];
+    const keyOf = ({ x, y }) => `${x},${y}`;
+    const blocked = new Set([
+      ...snake.slice(0, -1).map(keyOf),
+      ...enemyBody.map(keyOf),
+      keyOf(enemy),
+      ...obstacles.map(keyOf),
+    ]);
+    const startKey = keyOf(head);
+    const foodKey = keyOf(food);
+    const queue = [head];
+    const previous = new Map([[startKey, null]]);
+
+    for (let index = 0; index < queue.length && !previous.has(foodKey); index += 1) {
+      const current = queue[index];
+      for (const direction of directions) {
+        const next = { x: current.x + direction.x, y: current.y + direction.y };
+        const nextKey = keyOf(next);
+        if (
+          next.x < 0 ||
+          next.x >= grid ||
+          next.y < 0 ||
+          next.y >= grid ||
+          blocked.has(nextKey) ||
+          previous.has(nextKey)
+        ) {
+          continue;
+        }
+        previous.set(nextKey, keyOf(current));
+        queue.push(next);
+      }
+    }
+
+    if (previous.has(foodKey)) {
+      let firstStepKey = foodKey;
+      while (previous.get(firstStepKey) !== startKey) {
+        firstStepKey = previous.get(firstStepKey);
+      }
+      const [x, y] = firstStepKey.split(",").map(Number);
+      return { x: x - head.x, y: y - head.y };
+    }
+
+    const candidates = directions
+      .map((direction) => ({
+        direction,
+        position: { x: head.x + direction.x, y: head.y + direction.y },
+      }))
+      .filter(({ direction, position }) => {
+        const key = keyOf(position);
+        return (
+          !(dir.x === -direction.x && dir.y === -direction.y) &&
+          position.x >= 0 &&
+          position.x < grid &&
+          position.y >= 0 &&
+          position.y < grid &&
+          !blocked.has(key)
+        );
+      });
+
+    if (!candidates.length) return dir;
+
+    function reachableArea(start, occupied) {
+      const visited = new Set([keyOf(start)]);
+      const cells = [start];
+      for (let index = 0; index < cells.length; index += 1) {
+        const current = cells[index];
+        for (const direction of directions) {
+          const next = { x: current.x + direction.x, y: current.y + direction.y };
+          const key = keyOf(next);
+          if (
+            next.x < 0 ||
+            next.x >= grid ||
+            next.y < 0 ||
+            next.y >= grid ||
+            occupied.has(key) ||
+            visited.has(key)
+          ) {
+            continue;
+          }
+          visited.add(key);
+          cells.push(next);
+        }
+      }
+      return visited.size;
+    }
+
+    function scoreCandidate(candidate) {
+      const occupied = new Set(blocked);
+      if (keyOf(candidate.position) === foodKey && snake.length) {
+        occupied.add(keyOf(snake[snake.length - 1]));
+      }
+      occupied.add(keyOf(candidate.position));
+      return {
+        ...candidate,
+        area: reachableArea(candidate.position, occupied),
+        distance:
+          Math.abs(candidate.position.x - food.x) + Math.abs(candidate.position.y - food.y),
+      };
+    }
+
+    return candidates
+      .map(scoreCandidate)
+      .reduce((best, candidate) =>
+        candidate.area > best.area ||
+        (candidate.area === best.area && candidate.distance < best.distance)
+          ? candidate
+          : best
+      ).direction;
+  }
+
+  function toggleAiMode() {
+    aiMode = !aiMode;
+    if (aiMode) {
+      isSwipeMode = false;
+      if (gameOver) resetGame();
+      start();
+    }
+  }
+
   function step() {
     if (gameOver) return;
+    if (aiMode) nextDir = getAiDirection();
     dir = nextDir;
 
     const head = { ...snake[0] };
     head.x += dir.x;
     head.y += dir.y;
+    const willGrow = head.x === food.x && head.y === food.y;
 
     if (head.x < 0 || head.x >= grid || head.y < 0 || head.y >= grid) {
-      endGame();
+      endGame("wall");
       return;
     }
-    if (snake.some((s) => s.x === head.x && s.y === head.y)) {
-      endGame();
+    if (
+      snake.some(
+        (segment, index) =>
+          segment.x === head.x &&
+          segment.y === head.y &&
+          (willGrow || index < snake.length - 1)
+      )
+    ) {
+      endGame("self");
       return;
     }
     if (obstacles.some((o) => o.x === head.x && o.y === head.y)) {
-      endGame();
+      endGame("obstacle");
+      return;
+    }
+    if (
+      (enemy.x === head.x && enemy.y === head.y) ||
+      enemyBody.some((segment) => segment.x === head.x && segment.y === head.y)
+    ) {
+      endGame("rival");
       return;
     }
 
     snake.unshift(head);
 
-    if (head.x === food.x && head.y === food.y) {
+    if (willGrow) {
       score += 10;
       best = Math.max(best, score);
       spawnParticles(food.x, food.y, "player");
@@ -265,7 +412,7 @@
     }
 
     if (obstacles.some((o) => o.x === enemy.x && o.y === enemy.y)) {
-      endGame();
+      endGame("win");
       return;
     }
 
@@ -277,8 +424,21 @@
       food = randomFood();
     }
 
-    if (enemy.x === snake[0].x && enemy.y === snake[0].y) {
-      endGame();
+    if (snake.some((segment) => segment.x === enemy.x && segment.y === enemy.y)) {
+      endGame("rival");
+      return;
+    }
+
+    const playerReachedGoal = score >= targetScore;
+    const enemyReachedGoal = enemyScore >= targetScore;
+    if (playerReachedGoal || enemyReachedGoal) {
+      endGame(
+        playerReachedGoal && enemyReachedGoal
+          ? "draw"
+          : playerReachedGoal
+            ? "win"
+            : "enemy-win"
+      );
       return;
     }
 
@@ -286,10 +446,21 @@
     draw();
   }
 
-  function endGame() {
+  function endGame(result) {
     gameOver = true;
+    gameResult = result;
     pause();
     draw();
+  }
+
+  function getResultMessage() {
+    if (gameResult === "win") return "Llegaste primero a 500 puntos";
+    if (gameResult === "enemy-win") return "El rival llegó primero a 500";
+    if (gameResult === "draw") return "Ambos alcanzaron la meta";
+    if (gameResult === "rival") return "Choque con el rival";
+    if (gameResult === "self") return "Choque con tu cuerpo";
+    if (gameResult === "obstacle") return "Choque con un obstáculo";
+    return "Choque contra el muro";
   }
 
   function moveEnemy(current, target) {
@@ -331,7 +502,7 @@
   }
 
   function setDir(x, y) {
-    if (gameOver) return;
+    if (gameOver || aiMode) return;
     if (dir.x === -x && dir.y === -y) return;
     isActive = true;
     if (!running && !gameOver) start();
@@ -347,6 +518,7 @@
       toggleGameState();
       return;
     }
+    if (aiMode) return;
     if (e.key === "ArrowUp") setDir(0, -1);
     if (e.key === "ArrowDown") setDir(0, 1);
     if (e.key === "ArrowLeft") setDir(-1, 0);
@@ -354,13 +526,13 @@
   }
 
   function onTouchStart(e) {
-    if (!isSwipeMode || gameOver) return;
+    if (!isSwipeMode || aiMode || gameOver) return;
     const t = e.touches[0];
     touchStart = { x: t.clientX, y: t.clientY };
   }
 
   function onTouchEnd(e) {
-    if (!isSwipeMode || gameOver) return;
+    if (!isSwipeMode || aiMode || gameOver) return;
     if (!touchStart) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - touchStart.x;
@@ -513,10 +685,18 @@
       ctx.fillStyle = "#fff";
       ctx.font = "700 20px system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("FIN DE PARTIDA", size / 2, size / 2 - 4);
+      const resultTitle =
+        gameResult === "win"
+          ? "¡VICTORIA!"
+          : gameResult === "enemy-win"
+            ? "GANA EL RIVAL"
+            : gameResult === "draw"
+              ? "EMPATE"
+              : "FIN DE PARTIDA";
+      ctx.fillText(resultTitle, size / 2, size / 2 - 4, size - 16);
       ctx.fillStyle = "#a8c0d0";
-      ctx.font = "500 13px system-ui, sans-serif";
-      ctx.fillText("Usa Nueva partida para volver a jugar", size / 2, size / 2 + 22, size - 24);
+      ctx.font = "500 12px system-ui, sans-serif";
+      ctx.fillText(getResultMessage(), size / 2, size / 2 + 22, size - 20);
     }
   }
 
@@ -591,7 +771,23 @@
       </div>
       <div class="header-actions">
         <span class="game-status" class:is-running={running} class:is-over={gameOver}>
-          {gameOver ? "Finalizada" : running ? "En curso" : isActive ? "En pausa" : "Listo"}
+          {gameOver
+            ? gameResult === "win"
+              ? "¡Victoria!"
+              : gameResult === "enemy-win"
+                ? "Ganó el rival"
+                : gameResult === "draw"
+                  ? "Empate"
+                  : "Finalizada"
+            : running
+              ? aiMode
+                ? "IA jugando"
+                : "En curso"
+              : isActive
+                ? aiMode
+                  ? "IA en pausa"
+                  : "En pausa"
+                : "Listo"}
         </span>
         <button
           type="button"
@@ -623,6 +819,7 @@
           <div class="score-main">
             <span class="panel-label">PUNTUACIÓN</span>
             <strong>{score}</strong>
+            <span class="score-goal">Meta: {targetScore}</span>
           </div>
           <div class="score-grid">
             <div class="score-tile">
@@ -643,23 +840,39 @@
         <section class="control-card" aria-label="Controles">
           <div class="control-card-heading">
             <span class="panel-label">CONTROLES</span>
-            <div class="control-modes" role="group" aria-label="Modo de control">
+            <div class="control-modes" role="group" aria-label="Control de la serpiente azul">
               <button
                 type="button"
-                class:mode-active={!isSwipeMode}
-                aria-pressed={!isSwipeMode}
-                on:click={() => (isSwipeMode = false)}
+                class:mode-active={!isSwipeMode && !aiMode}
+                aria-pressed={!isSwipeMode && !aiMode}
+                on:click={() => {
+                  aiMode = false;
+                  isSwipeMode = false;
+                }}
               >Botones</button>
               <button
                 type="button"
-                class:mode-active={isSwipeMode}
-                aria-pressed={isSwipeMode}
-                on:click={() => (isSwipeMode = true)}
+                class:mode-active={isSwipeMode && !aiMode}
+                aria-pressed={isSwipeMode && !aiMode}
+                on:click={() => {
+                  aiMode = false;
+                  isSwipeMode = true;
+                }}
               >Deslizar</button>
+              <button
+                type="button"
+                class:mode-active={aiMode}
+                aria-pressed={aiMode}
+                aria-label={aiMode ? "Tomar el control manual" : "Ver jugar a la IA azul"}
+                title={aiMode ? "Tomar el control manual" : "Ver jugar a la IA azul"}
+                on:click={toggleAiMode}
+              >IA</button>
             </div>
           </div>
 
-          {#if isSwipeMode}
+          {#if aiMode}
+            <p class="swipe-hint">La IA azul busca comida, evita choques y compite por llegar a 500 puntos.</p>
+          {:else if isSwipeMode}
             <p class="swipe-hint">Desliza sobre la cuadrícula para cambiar de dirección.</p>
           {:else}
             <div class="controls" role="group" aria-label="Direcciones">
@@ -668,6 +881,10 @@
               <button type="button" class="direction-button right" aria-label="Mover a la derecha" on:click={() => setDir(1, 0)}>→</button>
               <button type="button" class="direction-button down" aria-label="Mover abajo" on:click={() => setDir(0, 1)}>↓</button>
             </div>
+          {/if}
+
+          {#if gameOver}
+            <p class="game-result-message">{getResultMessage()}</p>
           {/if}
 
           <div class="game-actions">
